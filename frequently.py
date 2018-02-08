@@ -4,6 +4,7 @@
 Control LIFX bulbs according to schedules.
 """
 import json
+import traceback
 from datetime import datetime
 
 import os
@@ -73,14 +74,26 @@ def turn_off_slowly(duration=10):
     log("Turned off slowly.")
 
 
+def are_any_lights_on():
+    for light in api.list_lights():
+        if light['power'] == 'on':
+            return True
+    return False
+
+
 def warn_and_then_turn_lights_off_slowly():
+    # Skip if lights are already off.
+    if not are_any_lights_on():
+        log("Lights are already off. No need to turn them off again.")
+        return
+    # Perform the actual action.
     [warn_once(warn_speed=2) for _ in range(2)]
     turn_off_slowly()
 
 
 def log(message):
     with open(os.path.join(ABS_DIR, "frequently.log"), "a") as log_file:
-        log_file.write("{}: {}\n".format(datetime.utcnow().isoformat(), message))
+        log_file.write("[{}]: {}\n".format(datetime.utcnow().isoformat(), message))
 
 
 if __name__ == '__main__':
@@ -88,6 +101,7 @@ if __name__ == '__main__':
         main()
     except Exception as e:
         # Log the exception.
-        log(str(e))
+        tb = traceback.format_exc()
+        log(tb)
         # Re-raise the exception.
         raise
